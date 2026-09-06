@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS leaderboard;
+DROP TABLE IF EXISTS game_questions;
+DROP TABLE IF EXISTS games;
+DROP TABLE IF EXISTS vouchers;
+DROP TABLE IF EXISTS questions;
+CREATE TABLE questions(id INTEGER PRIMARY KEY AUTOINCREMENT,category TEXT NOT NULL,question TEXT NOT NULL,options_json TEXT NOT NULL,correct_answer TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE vouchers(id INTEGER PRIMARY KEY AUTOINCREMENT,code_hash TEXT NOT NULL UNIQUE,attempts INTEGER NOT NULL DEFAULT 1,used_at TEXT,used_by TEXT);
+CREATE TABLE games(id TEXT PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,username TEXT NOT NULL,voucher_id INTEGER,attempts_remaining INTEGER NOT NULL,score INTEGER NOT NULL DEFAULT 0,started_at TEXT NOT NULL,finished_at TEXT,status TEXT NOT NULL DEFAULT 'active');
+CREATE TABLE game_questions(game_id TEXT NOT NULL,question_id INTEGER NOT NULL,sequence INTEGER NOT NULL,shown_at TEXT,answered INTEGER NOT NULL DEFAULT 0,answer TEXT,correct INTEGER,answered_at TEXT,PRIMARY KEY(game_id,question_id));
+CREATE TABLE leaderboard(game_id TEXT PRIMARY KEY,username TEXT NOT NULL,score INTEGER NOT NULL,finished_at TEXT NOT NULL);
+CREATE INDEX idx_q_active ON questions(active);
+CREATE INDEX idx_v_hash ON vouchers(code_hash);
+CREATE INDEX idx_g_token ON games(token_hash);

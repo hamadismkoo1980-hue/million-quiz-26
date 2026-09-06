@@ -1,0 +1,1 @@
+export async function onRequestGet({env}){const r=await env.DB.prepare("SELECT username,score,finished_at FROM leaderboard ORDER BY score DESC,finished_at ASC LIMIT 100").all();return new Response(JSON.stringify({ok:true,rows:r.results||[]}),{headers:{"content-type":"application/json","cache-control":"no-store"}})}

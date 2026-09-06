@@ -1,0 +1,1 @@
+export async function onRequestGet({env}){const r=await env.DB.prepare("SELECT COUNT(*) n FROM vouchers WHERE used_at IS NOT NULL").first();const entries=Number(r?.n||0);return new Response(JSON.stringify({ok:true,entries,prizePool:entries*0.60}),{headers:{"content-type":"application/json","cache-control":"no-store"}})}
