@@ -1,1 +1,87 @@
-export async function onRequestPost({request,env}){const a=await auth(request,env);if(!a)return j({ok:false,message:"جلسة غير صالحة"},401);const g=await env.DB.prepare("SELECT * FROM games WHERE id=?").bind(a.gameId).first();if(!g)return j({ok:false,message:"الجولة غير موجودة"},404);if(g.status==="finished")return j({ok:true,score:g.score});const now=new Date().toISOString();await env.DB.batch([env.DB.prepare("UPDATE games SET status='finished',finished_at=? WHERE id=?").bind(now,g.id),env.DB.prepare("INSERT OR IGNORE INTO leaderboard(game_id,username,score,finished_at) VALUES(?,?,?,?)").bind(g.id,g.username,g.score,now)]);return j({ok:true,score:g.score})}async function auth(request,env){const t=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();if(!t)return null;const h=await sha(t);return await env.DB.prepare("SELECT id AS gameId,username FROM games WHERE token_hash=?").bind(h).first()}async function sha(s){const h=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("")}function j(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}})}
+export async function onRequestPost({ request, env }) {
+  const a = await auth(request, env);
+
+  if (!a) {
+    return j({ ok: false, message: "جلسة غير صالحة" }, 401);
+  }
+
+  const g = await env.DB
+    .prepare("SELECT * FROM games WHERE id=?")
+    .bind(a.gameId)
+    .first();
+
+  if (!g) {
+    return j({ ok: false, message: "الجولة غير موجودة" }, 404);
+  }
+
+  const existing = await env.DB
+    .prepare("SELECT game_id FROM leaderboard WHERE game_id=?")
+    .bind(g.id)
+    .first();
+
+  if (existing) {
+    return j({
+      ok: true,
+      score: g.score,
+      saved: true
+    });
+  }
+
+  const now = new Date().toISOString();
+
+  await env.DB.batch([
+    env.DB
+      .prepare(
+        "UPDATE games SET status='finished',finished_at=? WHERE id=?"
+      )
+      .bind(now, g.id),
+
+    env.DB
+      .prepare(
+        "INSERT OR IGNORE INTO leaderboard(game_id,username,score,finished_at) VALUES(?,?,?,?)"
+      )
+      .bind(g.id, g.username, g.score, now)
+  ]);
+
+  return j({
+    ok: true,
+    score: g.score,
+    saved: true
+  });
+}
+
+async function auth(request, env) {
+  const t = (request.headers.get("authorization") || "")
+    .replace(/^Bearer\s+/i, "")
+    .trim();
+
+  if (!t) return null;
+
+  const h = await sha(t);
+
+  return await env.DB
+    .prepare("SELECT id AS gameId,username FROM games WHERE token_hash=?")
+    .bind(h)
+    .first();
+}
+
+async function sha(s) {
+  const h = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(s)
+  );
+
+  return [...new Uint8Array(h)]
+    .map(x => x.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function j(o, s = 200) {
+  return new Response(JSON.stringify(o), {
+    status: s,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store"
+    }
+  });
+}
